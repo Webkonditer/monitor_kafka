@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Монитор</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.0.0-alpha1/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .checked { background-color: lightgreen; }
+        .unchecked { background-color: pink; }
+        footer { position: fixed; bottom: 0; width: 100%; text-align: center; background-color: black; color: aliceblue }
+    </style>
+</head>
+<body>
+<header class="p-3 mb-3 border-bottom bg-light">
+    <h1>Монитор</h1>
+</header>
+<main class="container">
+    <h2>Последние сообщения</h2>
+    <select class="form-select mb-3" id="topicSelect">
+        <option value="">Все</option>
+        <option th:each="topic : ${topics}" th:value="${topic}" th:text="${topic}"></option>
+    </select>
+    <div id="messagesTable" style="height: calc(100vh - 260px); overflow-y: auto;">
+        <table class="table">
+            <thead style="position: sticky; top: 0; background-color: aliceblue">
+            <tr>
+                <th>Дата</th>
+                <th>Топик</th>
+                <th>Сообщение</th>
+                <th>Действия</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="message : ${messages}" th:class="${message.checked} ? 'checked' : 'unchecked'">
+<!--                <td th:text="${message.receivedAt}">Дата</td>-->
+                <td th:text="${#temporals.format(message.receivedAt, 'dd.MM.yyyy HH:mm')}">Дата</td>
+                <td th:text="${message.topic}">Топик</td>
+                <td th:text="${message.messageBody}">Сообщение</td>
+                <td><button class="btn btn-primary">Открыть</button></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+<footer class="py-3 bg-dark">
+    <span>РНПК 2024</span>
+</footer>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script>
+    // JavaScript для обновления таблицы в зависимости от выбранного топика
+    document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById("topicSelect").addEventListener("change", function() {
+            var selectedTopic = this.value;
+            fetch(`/messages?topic=${selectedTopic}`)
+                .then(response => response.json())
+                .then(data => {
+                    var tbody = document.querySelector("#messagesTable tbody");
+                    tbody.innerHTML = ''; // Очищаем текущие сообщения
+                    data.forEach(message => {
+                        var rowClass = message.checked ? 'checked' : 'unchecked';
+                        var row = `<tr class="${rowClass}">
+                      <td>${formatDate(message.receivedAt)}</td>
+                      <td>${message.topic}</td>
+                      <td>${message.messageBody}</td>
+                      <td><button class="btn btn-primary">Открыть</button></td>
+                     </tr>`;
+                        tbody.innerHTML += row; // Добавляем новые сообщения
+                        document.getElementById('messagesTable').scrollTop = 0;
+                    });
+                })
+                .catch(error => console.error('Error fetching messages:', error));
+        });
+    });
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+        return new Intl.DateTimeFormat('ru-RU', options).format(date).replace(',', '');
+    }
+</script>
+</body>
+</html>

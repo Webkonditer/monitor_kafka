@@ -1,9 +1,11 @@
-package ru.webkonditer.resiver;
+package ru.webkonditer.resiver.service;
 
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
+import ru.webkonditer.resiver.MessageRecord;
+import ru.webkonditer.resiver.repository.MessageRecordRepository;
 
 import java.time.LocalDateTime;
 
