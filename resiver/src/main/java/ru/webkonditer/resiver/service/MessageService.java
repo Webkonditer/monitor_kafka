@@ -1,9 +1,10 @@
 package ru.webkonditer.resiver.service;
 
 import org.springframework.stereotype.Service;
-import ru.webkonditer.resiver.MessageRecord;
+import ru.webkonditer.resiver.model.MessageRecord;
 import ru.webkonditer.resiver.repository.MessageRecordRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -31,6 +32,15 @@ public class MessageService {
         }
 //        return records.stream().map(this::convertToDto).collect(Collectors.toList());
         return records;
+    }
+
+    // Получение сообщений по топику и интервалу дат
+    public List<MessageRecord> getMessagesByTopicAndDateRange(String topic, LocalDateTime start, LocalDateTime end) {
+
+        if(topic == null || topic.isEmpty()) {
+            return messageRecordRepository.findByReceivedAtBetweenOrderByReceivedAtDesc(start, end);
+        }
+        return messageRecordRepository.findByTopicAndReceivedAtBetweenOrderByReceivedAtDesc(topic, start, end);
     }
 
 //    private MessageRecordDto convertToDto(MessageRecord record) {

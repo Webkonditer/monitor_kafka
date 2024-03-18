@@ -7,19 +7,36 @@
     <style>
         .checked { background-color: lightgreen; }
         .unchecked { background-color: pink; }
-        footer { position: fixed; bottom: 0; width: 100%; text-align: center; background-color: black; color: aliceblue }
+        header {background-color: rgb(49, 65, 74);}
+        footer { position: fixed; bottom: 0; width: 100%; text-align: center; background-color: rgb(49, 65, 74); color: aliceblue }
     </style>
 </head>
 <body>
-<header class="p-3 mb-3 border-bottom bg-light">
-    <h1>Монитор</h1>
+<header class="p-3 mb-3 border-bottom text-white">
+    <h1><img src="/logo.png" alt="Логотип РНПК"> Монитор КИСАПП-2</h1>
 </header>
 <main class="container">
-    <h2>Последние сообщения</h2>
-    <select class="form-select mb-3" id="topicSelect">
-        <option value="">Все</option>
-        <option th:each="topic : ${topics}" th:value="${topic}" th:text="${topic}"></option>
-    </select>
+    <h2>Сообщения об ошибках</h2>
+
+    <div class="row mb-3" >
+        <div class="form-group col-md-5 mx-2">
+            <label for="topicSelect">Топик:</label>
+            <select class="form-select selector" id="topicSelect">
+                <option value="">Все</option>
+                <option th:each="topic : ${topics}" th:value="${topic}" th:text="${topic}"></option>
+            </select>
+        </div>
+        <div class="form-group col-md-3 mx-2">
+            <label for="startDate">От:</label>
+            <input type="date" id="startDate" name="startDate" class="form-control selector" required th:value="${startDate}" />
+        </div>
+
+        <div class="form-group col-md-3 mx-2">
+            <label for="endDate">До:</label>
+            <input type="date" id="endDate" name="endDate" class="form-control selector" required th:value="${endDate}" />
+        </div>
+    </div>
+
     <div id="messagesTable" style="height: calc(100vh - 260px); overflow-y: auto;">
         <table class="table">
             <thead style="position: sticky; top: 0; background-color: aliceblue">
@@ -32,51 +49,165 @@
             </thead>
             <tbody>
             <tr th:each="message : ${messages}" th:class="${message.checked} ? 'checked' : 'unchecked'">
-<!--                <td th:text="${message.receivedAt}">Дата</td>-->
                 <td th:text="${#temporals.format(message.receivedAt, 'dd.MM.yyyy HH:mm')}">Дата</td>
                 <td th:text="${message.topic}">Топик</td>
                 <td th:text="${message.messageBody}">Сообщение</td>
-                <td><button class="btn btn-primary">Открыть</button></td>
+                <td>
+                    <button class="btn btn-primary open-edit-form"
+                            th:data-id="${message.id}"
+                            th:data-receivedat="${#temporals.format(message.receivedAt, 'dd.MM.yyyy HH:mm')}"
+                            th:data-topic="${message.topic}"
+                            th:data-messagebody="${message.messageBody}"
+                            th:data-checked="${message.checked}"
+                            th:data-comment="${message.comment}">Открыть</button>
+                </td>
             </tr>
             </tbody>
         </table>
     </div>
+
+    <div id="editForm" style="display: none;">
+        <h3>Редактирование сообщения:</h3>
+        <form>
+            <div class="form-group">
+                <label for="edit-id">ID</label>
+                <input type="text" class="form-control" id="edit-id" disabled>
+            </div>
+            <div class="form-group">
+                <label for="edit-receivedAt">Дата и время</label>
+                <input type="text" class="form-control" id="edit-receivedAt">
+            </div>
+            <div class="form-group">
+                <label for="edit-topic">Топик</label>
+                <input type="text" class="form-control" id="edit-topic">
+            </div>
+            <div class="form-group">
+                <label for="edit-messageBody">Сообщение</label>
+                <textarea class="form-control" id="edit-messageBody"></textarea>
+            </div>
+            <div class="form-group form-check">
+                <input type="checkbox" class="form-check-input" id="edit-checked">
+                <label class="form-check-label" for="edit-checked">Проверено</label>
+            </div>
+            <div class="form-group">
+                <label for="edit-comment">Комментарий</label>
+                <input type="text" class="form-control" id="edit-comment">
+            </div>
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+            <button type="button" class="btn btn-secondary" onclick="closeForm()">Отмена</button>
+        </form>
+    </div>
+
+
 </main>
-<footer class="py-3 bg-dark">
-    <span>РНПК 2024</span>
+<footer class="py-3 ">
+    <span>© 2024 РНПК</span>
 </footer>
-<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
 <script>
     // JavaScript для обновления таблицы в зависимости от выбранного топика
     document.addEventListener("DOMContentLoaded", function() {
-        document.getElementById("topicSelect").addEventListener("change", function() {
-            var selectedTopic = this.value;
-            fetch(`/messages?topic=${selectedTopic}`)
-                .then(response => response.json())
-                .then(data => {
-                    var tbody = document.querySelector("#messagesTable tbody");
-                    tbody.innerHTML = ''; // Очищаем текущие сообщения
-                    data.forEach(message => {
-                        var rowClass = message.checked ? 'checked' : 'unchecked';
-                        var row = `<tr class="${rowClass}">
+
+        // Запуск функции каждые 5 секунд
+        setInterval(changeTable, 5000);
+
+        // Слушаем изменения в селектах
+        document.querySelectorAll('.selector').forEach(item => {
+            item.addEventListener('change', function() {
+                changeTable();
+                rollUp();
+            });
+        });
+
+        openForm();
+
+    });
+
+    function changeTable() {
+        var selectedTopic = document.getElementById("topicSelect").value;
+        var startDate = document.getElementById("startDate").value;
+        var endDate = document.getElementById("endDate").value;
+        fetch(`/messages?topic=${selectedTopic}&startDate=${startDate}&endDate=${endDate}`)
+            .then(response => response.json())
+            .then(data => {
+                var tbody = document.querySelector("#messagesTable tbody");
+                tbody.innerHTML = ''; // Очищаем текущие сообщения
+                data.forEach(message => {
+                    var rowClass = message.checked ? 'checked' : 'unchecked';
+                    var row = `<tr class="${rowClass}">
                       <td>${formatDate(message.receivedAt)}</td>
                       <td>${message.topic}</td>
                       <td>${message.messageBody}</td>
-                      <td><button class="btn btn-primary">Открыть</button></td>
+                      <td>
+                            <button class="btn btn-primary open-edit-form"
+                                    data-id="${message.id}"
+                                    data-receivedat="${formatDate(message.receivedAt)}"
+                                    data-topic="${message.topic}"
+                                    data-messagebody="${message.messageBody}"
+                                    data-checked="${message.checked}"
+                                    data-comment="${message.comment}"
+                                    onclick="openForm()"
+                                    >Открыть</button>
+                    </td>
                      </tr>`;
-                        tbody.innerHTML += row; // Добавляем новые сообщения
-                        document.getElementById('messagesTable').scrollTop = 0;
-                    });
-                })
-                .catch(error => console.error('Error fetching messages:', error));
+                    tbody.innerHTML += row; // Добавляем новые сообщения
+                });
+                attachEditFormEventListeners();
+            })
+            .catch(error => console.error('Error fetching messages:', error));
+    }
+
+    function attachEditFormEventListeners() {
+        document.querySelectorAll('.open-edit-form').forEach(button => {
+            button.addEventListener('click', function() {
+                // Ваш код для открытия формы редактирования и заполнения ее данными
+            });
         });
-    });
+    }
 
     function formatDate(dateString) {
         const date = new Date(dateString);
         const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
         return new Intl.DateTimeFormat('ru-RU', options).format(date).replace(',', '');
     }
+
+    // Прокрутка таблицы вверх
+    function rollUp() {
+        document.getElementById('messagesTable').scrollTop = 0;
+    }
+
+    // Закрытие формы и открытие таблицы
+    function closeForm() {
+        document.getElementById('messagesTable').style.display = 'block';
+        document.getElementById('editForm').style.display = 'none';
+    }
+
+    // Открываем форму редактирования и заполняем данными
+    function openForm() {
+        document.querySelectorAll('.open-edit-form').forEach(button => {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                const receivedAt = this.getAttribute('data-receivedat');
+                const topic = this.getAttribute('data-topic');
+                const messageBody = this.getAttribute('data-messagebody');
+                const checked = this.getAttribute('data-checked') === 'true';
+                const comment = this.getAttribute('data-comment');
+
+                // Заполните форму редактирования данными
+                document.getElementById('edit-id').value = id;
+                document.getElementById('edit-receivedAt').value = receivedAt;
+                document.getElementById('edit-topic').value = topic;
+                document.getElementById('edit-messageBody').value = messageBody;
+                document.getElementById('edit-checked').checked = checked;
+                document.getElementById('edit-comment').value = comment;
+
+                // Показать форму редактирования и скрыть таблицу
+                document.getElementById('messagesTable').style.display = 'none';
+                document.getElementById('editForm').style.display = 'block';
+            });
+        });
+    }
+
 </script>
 </body>
 </html>
