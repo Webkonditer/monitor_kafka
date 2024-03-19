@@ -1,24 +1,27 @@
 package ru.webkonditer.resiver.controller;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import ru.webkonditer.resiver.model.MessageRecord;
+import ru.webkonditer.resiver.service.KafkaListenerService;
 import ru.webkonditer.resiver.service.MessageService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class MainController {
 
-    private  final MessageService messageService;
+    private final MessageService messageService;
+    private final KafkaListenerService kafkaListenerService;
 
-    public MainController(MessageService messageService) {
+    public MainController(MessageService messageService, KafkaListenerService kafkaListenerService) {
         this.messageService = messageService;
+        this.kafkaListenerService = kafkaListenerService;
     }
 
     @GetMapping
@@ -45,4 +48,38 @@ public class MainController {
     ) {
         return messageService.getMessagesByTopicAndDateRange(topic, startDate.atStartOfDay(), endDate.atTime(23,59,59));
     }
+
+    @GetMapping("/messages/{id}")
+    @ResponseBody
+    public MessageRecord getMessage(@PathVariable Long id) {
+        return messageService.getMessagesById(id);
+    }
+
+    @PutMapping("/messages/update")
+    @ResponseBody
+    public ResponseEntity<String> updateMessage(@RequestBody MessageRecord messageRecord) {
+        try {
+            messageService.updateMessage(messageRecord);
+            return ResponseEntity.ok().build();
+        }
+        catch (Exception e){
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/messages/send-to-topic")
+    public ResponseEntity<?> sendMessageToTopic(@RequestBody Map<String, String> messageData) {
+        System.out.println("Топик: " + messageData.get("topic"));
+        System.out.println("Сообщение: " + messageData.get("messageBody"));
+        // Обработка сообщения
+        try {
+            kafkaListenerService.sendMessage(messageData.get("topic"), messageData.get("messageBody"));
+            return ResponseEntity.ok().build();
+        }
+        catch (Exception e){
+            return ResponseEntity.badRequest().build();
+        }
+
+    }
+
 }

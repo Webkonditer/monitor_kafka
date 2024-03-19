@@ -16,11 +16,11 @@ public class MessageProducer {
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    private final String[] topics = {"topic1", "topic2", "topic3", "topic4", "topic5"};
+    private final String[] topics = {"topic1-error", "topic2-error", "topic3-error", "topic4-error", "topic5-error"};
     private final Random random = new Random();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Scheduled(fixedRate = 3000)
+    @Scheduled(fixedRate = 15000)
     public void sendMessage() {
         String topic = topics[random.nextInt(topics.length)];
         String key = UUID.randomUUID().toString();

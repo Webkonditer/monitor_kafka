@@ -1,5 +1,8 @@
 package ru.webkonditer.resiver.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
@@ -8,17 +11,22 @@ import ru.webkonditer.resiver.repository.MessageRecordRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 public class KafkaListenerService {
 
+    private final KafkaTemplate<String, String> kafkaTemplate;
     private final MessageRecordRepository repository;
 
-    public KafkaListenerService(MessageRecordRepository repository) {
+
+    public KafkaListenerService(KafkaTemplate<String, String> kafkaTemplate, MessageRecordRepository repository) {
+        this.kafkaTemplate = kafkaTemplate;
         this.repository = repository;
     }
 
-    //@KafkaListener(topics = {"topic1", "topic2", "topic3", "topic4", "topic5"})
+    // Слушаем топики в кафке
+    @KafkaListener(topics = {"topic1", "topic1-error", "topic2-error", "topic3-error", "topic4-error", "topic5-error"})
     public void listen(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         MessageRecord record = new MessageRecord();
         record.setReceivedAt(LocalDateTime.now());
@@ -29,10 +37,10 @@ public class KafkaListenerService {
         System.out.printf("Saved message from topic %s: %s%n", topic, message);
     }
 
-    //@KafkaListener(topics = "topicName", groupId = "myGroup")
-    public void listen(String message) {
-        System.out.println("Received message in group myGroup: " + message);
+    // Отправляем сообщения в кафку
+    public void sendMessage(String topic, String messageBody) {
+        String key = UUID.randomUUID().toString();
+        kafkaTemplate.send(topic, key, messageBody);
     }
-
 
 }

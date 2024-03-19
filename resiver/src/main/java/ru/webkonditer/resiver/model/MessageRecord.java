@@ -19,4 +19,7 @@ public class MessageRecord {
     private boolean checked = false;
     private String comment;
 
+    public boolean getChecked() {
+        return checked;
+    }
 }

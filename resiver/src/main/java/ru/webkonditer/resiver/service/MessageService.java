@@ -43,6 +43,19 @@ public class MessageService {
         return messageRecordRepository.findByTopicAndReceivedAtBetweenOrderByReceivedAtDesc(topic, start, end);
     }
 
+    public MessageRecord getMessagesById(Long id) {
+        return messageRecordRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Сообщение не найдено"));
+    }
+
+    public void updateMessage(MessageRecord messageRecord) {
+        var messageFromDb = getMessagesById(messageRecord.getId());
+        messageFromDb.setMessageBody(messageRecord.getMessageBody());
+        messageFromDb.setComment(messageRecord.getComment());
+        messageFromDb.setChecked(messageRecord.getChecked());
+        messageRecordRepository.save(messageFromDb);
+    }
+
 //    private MessageRecordDto convertToDto(MessageRecord record) {
 //        // Здесь происходит преобразование сущности в DTO
 //        return new MessageRecordDto(record.getId(), record.getReceivedAt(), record.getTopic(), record.getMessageBody(), record.isChecked(), record.getComment());

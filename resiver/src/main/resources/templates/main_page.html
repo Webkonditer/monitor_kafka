@@ -12,13 +12,12 @@
     </style>
 </head>
 <body>
-<header class="p-3 mb-3 border-bottom text-white">
+<header class="px-3 py-1 mb-3 border-bottom text-white">
     <h1><img src="/logo.png" alt="Логотип РНПК"> Монитор КИСАПП-2</h1>
 </header>
-<main class="container">
-    <h2>Сообщения об ошибках</h2>
-
+<main id="listOfError" class="container">
     <div class="row mb-3" >
+        <h2>Сообщения об ошибках</h2>
         <div class="form-group col-md-5 mx-2">
             <label for="topicSelect">Топик:</label>
             <select class="form-select selector" id="topicSelect">
@@ -48,59 +47,70 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="message : ${messages}" th:class="${message.checked} ? 'checked' : 'unchecked'">
-                <td th:text="${#temporals.format(message.receivedAt, 'dd.MM.yyyy HH:mm')}">Дата</td>
-                <td th:text="${message.topic}">Топик</td>
-                <td th:text="${message.messageBody}">Сообщение</td>
-                <td>
-                    <button class="btn btn-primary open-edit-form"
-                            th:data-id="${message.id}"
-                            th:data-receivedat="${#temporals.format(message.receivedAt, 'dd.MM.yyyy HH:mm')}"
-                            th:data-topic="${message.topic}"
-                            th:data-messagebody="${message.messageBody}"
-                            th:data-checked="${message.checked}"
-                            th:data-comment="${message.comment}">Открыть</button>
-                </td>
-            </tr>
+               <!-- Сюда будет вставляться таблица при помощи js-->
             </tbody>
         </table>
     </div>
-
-    <div id="editForm" style="display: none;">
-        <h3>Редактирование сообщения:</h3>
-        <form>
-            <div class="form-group">
-                <label for="edit-id">ID</label>
-                <input type="text" class="form-control" id="edit-id" disabled>
-            </div>
-            <div class="form-group">
-                <label for="edit-receivedAt">Дата и время</label>
-                <input type="text" class="form-control" id="edit-receivedAt">
-            </div>
-            <div class="form-group">
-                <label for="edit-topic">Топик</label>
-                <input type="text" class="form-control" id="edit-topic">
-            </div>
-            <div class="form-group">
-                <label for="edit-messageBody">Сообщение</label>
-                <textarea class="form-control" id="edit-messageBody"></textarea>
-            </div>
-            <div class="form-group form-check">
-                <input type="checkbox" class="form-check-input" id="edit-checked">
-                <label class="form-check-label" for="edit-checked">Проверено</label>
-            </div>
-            <div class="form-group">
-                <label for="edit-comment">Комментарий</label>
-                <input type="text" class="form-control" id="edit-comment">
-            </div>
-            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
-            <button type="button" class="btn btn-secondary" onclick="closeForm()">Отмена</button>
-        </form>
-    </div>
-
-
 </main>
-<footer class="py-3 ">
+
+<main id="editForm" class="container" style="display: none;">
+    <div class="row mb-3" >
+        <button class="btn btn-primary ms-3" style="width: auto; display: inline-block;" onclick="closeForm()">
+            < Вернуться к списку ошибок
+        </button>
+
+        <h2 class="mt-3">Редактирование сообщения:</h2>
+
+        <div class="form-group">
+            <label for="edit-id">ID</label>
+            <input type="text" class="form-control" id="edit-id" disabled>
+        </div>
+        <div class="form-group mt-2">
+            <label for="edit-receivedAt">Дата и время</label>
+            <input type="text" class="form-control" id="edit-receivedAt" disabled>
+        </div>
+        <div class="form-group mt-2">
+            <label for="edit-topic">Топик</label>
+            <input type="text" class="form-control" id="edit-topic" disabled>
+        </div>
+
+        <div class="form-group mt-2">
+            <label for="edit-messageBody">Сообщение</label>
+            <textarea class="form-control" id="edit-messageBody"></textarea>
+        </div>
+
+        <div class="form-group mt-2">
+            <label for="edit-comment">Комментарий</label>
+            <input type="text" class="form-control" id="edit-comment">
+        </div>
+
+        <div class="form-group form-check mt-2" style="margin-left: 12px">
+            <input type="checkbox" class="form-check-input" id="edit-checked">
+            <label class="form-check-label" for="edit-checked">Проверено</label>
+        </div>
+
+        <div class="form-group mt-2">
+            <button class="btn btn-primary" onclick="saveMessage()">Сохранить изменения</button>
+        </div>
+
+        <div class="form-group mt-2">
+            <label for="send-to-topic">Отправить в топик</label>
+            <input type="text" class="form-control" id="send-to-topic">
+        </div>
+
+        <div class="form-group mt-2">
+            <button class="btn btn-primary" onclick="sandToTopic()">Отправить</button>
+        </div>
+
+    </div>
+</main>
+
+<!--Всплывающее сообщение-->
+<div id="saveMessage" style="display:none; border-radius: 10px; position:fixed;
+                                top:50%; left:50%; transform:translate(-50%, -50%); background-color:#73ce73;
+                                color:white; padding:10px; z-index:1000;"></div>
+
+<footer class="py-2 ">
     <span>© 2024 РНПК</span>
 </footer>
 
@@ -108,8 +118,11 @@
     // JavaScript для обновления таблицы в зависимости от выбранного топика
     document.addEventListener("DOMContentLoaded", function() {
 
-        // Запуск функции каждые 5 секунд
-        setInterval(changeTable, 5000);
+        // Первое заполнение таблицы
+        changeTable();
+
+        // Запуск функции обновления каждые 5 секунд
+        setInterval(changeTable, 15000);
 
         // Слушаем изменения в селектах
         document.querySelectorAll('.selector').forEach(item => {
@@ -119,10 +132,9 @@
             });
         });
 
-        openForm();
-
     });
 
+    // Функция обновления таблицы
     function changeTable() {
         var selectedTopic = document.getElementById("topicSelect").value;
         var startDate = document.getElementById("startDate").value;
@@ -135,36 +147,22 @@
                 data.forEach(message => {
                     var rowClass = message.checked ? 'checked' : 'unchecked';
                     var row = `<tr class="${rowClass}">
-                      <td>${formatDate(message.receivedAt)}</td>
-                      <td>${message.topic}</td>
-                      <td>${message.messageBody}</td>
-                      <td>
-                            <button class="btn btn-primary open-edit-form"
-                                    data-id="${message.id}"
-                                    data-receivedat="${formatDate(message.receivedAt)}"
-                                    data-topic="${message.topic}"
-                                    data-messagebody="${message.messageBody}"
-                                    data-checked="${message.checked}"
-                                    data-comment="${message.comment}"
-                                    onclick="openForm()"
-                                    >Открыть</button>
-                    </td>
-                     </tr>`;
+                                  <td>${formatDate(message.receivedAt)}</td>
+                                  <td>${message.topic}</td>
+                                  <td>${message.messageBody}</td>
+                                  <td>
+                                    <button class="btn btn-primary open-edit-form" onclick="openForm(${message.id})">
+                                        Открыть
+                                    </button>
+                                  </td>
+                               </tr>`;
                     tbody.innerHTML += row; // Добавляем новые сообщения
                 });
-                attachEditFormEventListeners();
             })
             .catch(error => console.error('Error fetching messages:', error));
     }
 
-    function attachEditFormEventListeners() {
-        document.querySelectorAll('.open-edit-form').forEach(button => {
-            button.addEventListener('click', function() {
-                // Ваш код для открытия формы редактирования и заполнения ее данными
-            });
-        });
-    }
-
+    // Изменение формата даты
     function formatDate(dateString) {
         const date = new Date(dateString);
         const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
@@ -178,35 +176,100 @@
 
     // Закрытие формы и открытие таблицы
     function closeForm() {
-        document.getElementById('messagesTable').style.display = 'block';
+        document.getElementById('listOfError').style.display = 'block';
         document.getElementById('editForm').style.display = 'none';
+        changeTable();
     }
 
     // Открываем форму редактирования и заполняем данными
-    function openForm() {
-        document.querySelectorAll('.open-edit-form').forEach(button => {
-            button.addEventListener('click', function () {
-                const id = this.getAttribute('data-id');
-                const receivedAt = this.getAttribute('data-receivedat');
-                const topic = this.getAttribute('data-topic');
-                const messageBody = this.getAttribute('data-messagebody');
-                const checked = this.getAttribute('data-checked') === 'true';
-                const comment = this.getAttribute('data-comment');
+    function openForm(id) {
 
-                // Заполните форму редактирования данными
-                document.getElementById('edit-id').value = id;
-                document.getElementById('edit-receivedAt').value = receivedAt;
-                document.getElementById('edit-topic').value = topic;
-                document.getElementById('edit-messageBody').value = messageBody;
-                document.getElementById('edit-checked').checked = checked;
-                document.getElementById('edit-comment').value = comment;
+        fetch(`/messages/${id}`)
+            .then(response => response.json())
+            .then(message => {
 
-                // Показать форму редактирования и скрыть таблицу
-                document.getElementById('messagesTable').style.display = 'none';
-                document.getElementById('editForm').style.display = 'block';
-            });
-        });
+                    // Заполните форму редактирования данными
+                    document.getElementById('edit-id').value = message.id;
+                    document.getElementById('edit-receivedAt').value = formatDate(message.receivedAt);
+                    document.getElementById('edit-topic').value = message.topic;
+                    document.getElementById('send-to-topic').value = message.topic.replace("-error", "");
+                    document.getElementById('edit-messageBody').value = message.messageBody;
+                    document.getElementById('edit-checked').checked = message.checked;
+                    document.getElementById('edit-comment').value = message.comment;
+
+                    // Показать форму редактирования и скрыть таблицу
+                    document.getElementById('listOfError').style.display = 'none';
+                    document.getElementById('editForm').style.display = 'block';
+
+            })
+            .catch(error => console.error('Error fetching messages:', error));
     }
+
+    // Апдейт сообщения на сервере
+    function saveMessage() {
+        const messageData = {
+            id: document.getElementById('edit-id').value,
+            messageBody: document.getElementById('edit-messageBody').value,
+            checked: document.getElementById('edit-checked').checked,
+            comment: document.getElementById('edit-comment').value,
+        };
+
+        fetch('/messages/update', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messageData),
+        })
+            .then(response => {
+                if(response.ok) {
+                    showMessage("Сохранено", "#73ce73");
+                    return response.json();
+                }
+                showMessage("Ошибка сохранения", "red");
+                throw new Error('Network response was not ok.');
+            })
+            .then(data => console.log(data))
+            .catch(error => console.error('There was a problem with your fetch operation:', error));
+    }
+
+    // Отправка исправленного сообщения в топик
+    function sandToTopic() {
+        const messageData = {
+            topic: document.getElementById('send-to-topic').value,
+            messageBody: document.getElementById('edit-messageBody').value,
+        };
+
+        fetch('/messages/send-to-topic', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messageData),
+        })
+            .then(response => {
+                if(response.ok) {
+                    showMessage("Сообщению отправлено в кафку", "#73ce73");
+                    return response.json();
+                }
+                showMessage("Ошибка отправки", "red");
+                throw new Error('Network response was not ok.');
+            })
+            .then(data => console.log(data))
+            .catch(error => console.error('There was a problem with your fetch operation:', error));
+    }
+
+    // Показ сообщения
+    function showMessage(text, color) {
+        const messageDiv = document.getElementById('saveMessage');
+        messageDiv.innerText = text;
+        messageDiv.style.backgroundColor = color;
+        messageDiv.style.display = 'block';
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 2000);
+    }
+
 
 </script>
 </body>
