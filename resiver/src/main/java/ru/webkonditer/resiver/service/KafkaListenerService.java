@@ -5,6 +5,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import ru.webkonditer.resiver.model.MessageRecord;
 import ru.webkonditer.resiver.repository.MessageRecordRepository;
@@ -18,6 +19,7 @@ public class KafkaListenerService {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final MessageRecordRepository repository;
+    private String testMessage = null;
 
 
     public KafkaListenerService(KafkaTemplate<String, String> kafkaTemplate, MessageRecordRepository repository) {
@@ -41,6 +43,19 @@ public class KafkaListenerService {
     public void sendMessage(String topic, String messageBody) {
         String key = UUID.randomUUID().toString();
         kafkaTemplate.send(topic, key, messageBody);
+    }
+
+    @Async
+    public boolean getKafkaStatus() throws InterruptedException {
+        String text = UUID.randomUUID().toString();
+        kafkaTemplate.send("test_12345", text);
+        Thread.sleep(1000);
+        return text.equals(testMessage);
+    }
+
+    @KafkaListener(topics = {"test_12345"})
+    public void listenTest(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        testMessage = message;
     }
 
 }

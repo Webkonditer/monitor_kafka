@@ -55,6 +55,17 @@ public class MainController {
         return messageService.getMessagesById(id);
     }
 
+    @GetMapping("/messages/kafkaConnection")
+    @ResponseBody
+    public ResponseEntity<?> getKafkaStatus() throws InterruptedException {
+
+        if(kafkaListenerService.getKafkaStatus()) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @PutMapping("/messages/update")
     @ResponseBody
     public ResponseEntity<String> updateMessage(@RequestBody MessageRecord messageRecord) {
